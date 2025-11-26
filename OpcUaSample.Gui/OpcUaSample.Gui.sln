@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36414.22
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpcUaSample.Gui.Server", "OpcUaSample.Gui.Server\OpcUaSample.Gui.Server.csproj", "{4BB74468-207F-44A8-B76F-9F23BBF2FB9C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpcUaSample.Gui.Client", "OpcUaSample.Gui.Client\OpcUaSample.Gui.Client.csproj", "{5F73BAF3-3482-4CED-B713-1F2F848F9500}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4BB74468-207F-44A8-B76F-9F23BBF2FB9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4BB74468-207F-44A8-B76F-9F23BBF2FB9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4BB74468-207F-44A8-B76F-9F23BBF2FB9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4BB74468-207F-44A8-B76F-9F23BBF2FB9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5F73BAF3-3482-4CED-B713-1F2F848F9500}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F73BAF3-3482-4CED-B713-1F2F848F9500}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F73BAF3-3482-4CED-B713-1F2F848F9500}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F73BAF3-3482-4CED-B713-1F2F848F9500}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5E8E2F7E-E5F6-473A-B820-C65F43A2CE0B}
+	EndGlobalSection
+EndGlobal
