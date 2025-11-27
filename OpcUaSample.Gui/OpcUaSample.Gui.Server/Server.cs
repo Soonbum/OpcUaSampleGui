@@ -26,8 +26,7 @@ public partial class Server : Form
                 ApplicationType = ApplicationType.Server
             };
 
-            // [핵심] Builder 대신 수동으로 설정 객체 생성
-            // 빌더 내부의 불확실한 로직을 피하기 위해 직접 값을 할당합니다.
+            // 수동으로 설정 객체 생성
             Opc.Ua.ApplicationConfiguration config = new()
             {
                 ApplicationName = "SimpleServer",
@@ -59,7 +58,7 @@ public partial class Server : Form
                         StoreType = @"Directory",
                         StorePath = @"%CommonApplicationData%\OPC Foundation\CertificateStores\RejectedCertificates"
                     },
-                    AutoAcceptUntrustedCertificates = true, // 개발용 자동 수락
+                    AutoAcceptUntrustedCertificates = true, // 인증 자동 수락 (테스트용)
                     AddAppCertToTrustedStore = true
                 },
 
@@ -86,10 +85,10 @@ public partial class Server : Form
                 }
             };
 
-            // 3. 설정 유효성 검사 (필수)
+            // 설정 유효성 검사 (필수)
             await config.ValidateAsync(ApplicationType.Server);
 
-            // 4. 검증된 설정을 애플리케이션에 주입
+            // 검증된 설정을 애플리케이션에 주입
             application.ApplicationConfiguration = config;
 
             // 인증서 검증 (Async 필수)
@@ -112,7 +111,6 @@ public partial class Server : Form
         catch (Exception ex)
         {
             MessageBox.Show("서버 시작 오류: " + ex.Message);
-            // NullReferenceException -- 서버 시작 오류: Object reference not set to an instance of an object.
         }
     }
 
@@ -128,35 +126,131 @@ public partial class Server : Form
     }
 }
 
-internal class MyNodeManager : CustomNodeManager2
+internal class MyNodeManager_3DPrinter : CustomNodeManager2
 {
-    public MyNodeManager(IServerInternal server, Opc.Ua.ApplicationConfiguration configuration)
-        : base(server, configuration, "http://test.org/UA/SimpleServer") { }
+    // 노드를 나중에 업데이트하기 위해 멤버 변수로 보관
+    private BaseDataVariableState _temperatureNode;
+    private BaseDataVariableState _statusNode;
+    private System.Threading.Timer _simulationTimer; // 값 변경 시뮬레이션용
+
+    public MyNodeManager_3DPrinter(IServerInternal server, Opc.Ua.ApplicationConfiguration configuration) : base(server, configuration, "http://test.org/UA/SimpleServer")
+    {
+        // 1초마다 센서 값 변경 시뮬레이션 시작
+        _simulationTimer = new System.Threading.Timer(DoSimulation, null, 1000, 1000);
+    }
 
     public override void CreateAddressSpace(IDictionary<NodeId, IList<IReference>> externalReferences)
     {
         lock (Lock)
         {
-            BaseDataVariableState variable = new(null)
-            {
-                NodeId = new NodeId("HelloWorld", NamespaceIndex),
-                BrowseName = new QualifiedName("HelloWorld", NamespaceIndex),
-                DisplayName = new LocalizedText("HelloWorld"),
-                WriteMask = AttributeWriteMask.None,
-                UserWriteMask = AttributeWriteMask.None,
-                DataType = DataTypeIds.String,
-                ValueRank = ValueRanks.Scalar,
-                AccessLevel = AccessLevels.CurrentRead,
-                UserAccessLevel = AccessLevels.CurrentRead,
-                Value = "Hello World (Async Server!)"
-            };
-
+            // Objects 폴더 참조 가져오기 (여기에 자식들을 추가할 것입니다)
             if (!externalReferences.TryGetValue(ObjectIds.ObjectsFolder, out var references))
             {
-                externalReferences[ObjectIds.ObjectsFolder] = references = [];
+                externalReferences[ObjectIds.ObjectsFolder] = references = new List<IReference>();
             }
-            references.Add(new NodeStateReference(ReferenceTypeIds.Organizes, false, variable.NodeId));
-            AddPredefinedNode(SystemContext, variable);
+
+            // =================================================================
+            // 1. Hello World 노드 생성
+            // =================================================================
+            BaseDataVariableState helloNode = CreateVariable(null, "HelloWorld", "HelloWorld", BuiltInType.String, ValueRanks.Scalar);
+            helloNode.Value = "Hello World is Back!";
+            helloNode.AccessLevel = AccessLevels.CurrentRead;
+
+            // 노드 매니저에 등록
+            AddPredefinedNode(SystemContext, helloNode);
+
+            // Objects 폴더 목록에 추가 (그래야 클라이언트가 Browse 할 때 보임)
+            references.Add(new NodeStateReference(ReferenceTypeIds.Organizes, false, helloNode.NodeId));
+
+            // =================================================================
+            // 2. 3D Printer 폴더 및 노드 생성
+            // =================================================================
+            // "3DPrinter" 폴더 생성
+            FolderState printerFolder = CreateFolder(null, "3DPrinter", "3D Printer");
+            // [수정 1] 폴더를 노드 매니저에 등록 (필수)
+            AddPredefinedNode(SystemContext, printerFolder);
+
+            // Objects 폴더 목록에 3DPrinter 폴더 추가
+            references.Add(new NodeStateReference(ReferenceTypeIds.Organizes, false, printerFolder.NodeId));
+
+            // 온도 센서 노드 (Double, 읽기 전용)
+            // NodeId를 클라이언트와 맞추기 위해 "3DPrinter/Temperature"로 지정
+            _temperatureNode = CreateVariable(printerFolder, "3DPrinter/Temperature", "Temperature", BuiltInType.Double, ValueRanks.Scalar);
+            _temperatureNode.Value = 20.5;
+            _temperatureNode.AccessLevel = AccessLevels.CurrentRead;
+            // 변수를 노드 매니저에 등록 (필수)
+            AddPredefinedNode(SystemContext, _temperatureNode);
+
+            // 상태 제어 노드 (Boolean, 읽기/쓰기 가능 -> 제어용)
+            // NodeId를 "3DPrinter/IsActive"로 지정
+            _statusNode = CreateVariable(printerFolder, "3DPrinter/IsActive", "IsActive", BuiltInType.Boolean, ValueRanks.Scalar);
+            _statusNode.Value = false;
+            _statusNode.AccessLevel = AccessLevels.CurrentReadOrWrite;
+            _statusNode.UserAccessLevel = AccessLevels.CurrentReadOrWrite;
+            // 변수를 노드 매니저에 등록 (필수)
+            AddPredefinedNode(SystemContext, _statusNode);
+        }
+    }
+
+    // 헬퍼 함수: 폴더 생성
+    private FolderState CreateFolder(NodeState parent, string path, string name)
+    {
+        FolderState folder = new FolderState(parent)
+        {
+            SymbolicName = name,
+            ReferenceTypeId = ReferenceTypeIds.Organizes,
+            TypeDefinitionId = ObjectTypeIds.FolderType,
+            NodeId = new NodeId(path, NamespaceIndex),
+            BrowseName = new QualifiedName(path, NamespaceIndex),
+            DisplayName = new LocalizedText(name),
+            WriteMask = AttributeWriteMask.None,
+            UserWriteMask = AttributeWriteMask.None,
+            EventNotifier = EventNotifiers.None
+        };
+        if (parent != null) parent.AddChild(folder);
+        return folder;
+    }
+
+    // 헬퍼 함수: 변수 생성
+    private BaseDataVariableState CreateVariable(NodeState parent, string path, string name, BuiltInType type, int valueRank)
+    {
+        BaseDataVariableState variable = new BaseDataVariableState(parent)
+        {
+            SymbolicName = name,
+            ReferenceTypeId = ReferenceTypeIds.Organizes,
+            TypeDefinitionId = VariableTypeIds.BaseDataVariableType,
+            NodeId = new NodeId(path, NamespaceIndex),
+            BrowseName = new QualifiedName(path, NamespaceIndex),
+            DisplayName = new LocalizedText(name),
+            WriteMask = AttributeWriteMask.None,
+            UserWriteMask = AttributeWriteMask.None,
+            DataType = (uint)type,
+            ValueRank = valueRank
+        };
+        if (parent != null) parent.AddChild(variable);
+        return variable;
+    }
+
+    private void DoSimulation(object state)
+    {
+        // 서버가 실행 중일 때만 동작
+        if (_temperatureNode == null) return;
+
+        lock (Lock)
+        {
+            // 현재 온도 가져오기
+            double currentTemp = (double)_temperatureNode.Value;
+
+            // 랜덤하게 온도 변화 (+- 0.5도)
+            Random rnd = new Random();
+            currentTemp += (rnd.NextDouble() - 0.5);
+
+            // 값 업데이트
+            _temperatureNode.Value = currentTemp;
+            _temperatureNode.Timestamp = DateTime.UtcNow; // 시간 갱신 중요
+
+            // [중요] 변경 사항을 구독자(Client)에게 알림
+            _temperatureNode.ClearChangeMasks(SystemContext, false);
         }
     }
 }
@@ -170,7 +264,7 @@ internal class MyUaServer : StandardServer
         {
             // 여기서 내 NodeManager를 리스트에 "직접" 담습니다.
             // (Factory 오류 없이 인스턴스를 바로 넣을 수 있는 유일한 곳입니다.)
-            new MyNodeManager(server, configuration)
+            new MyNodeManager_3DPrinter(server, configuration)
         };
 
         // MasterNodeManager에게 내 리스트를 전달하며 생성합니다.
