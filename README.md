@@ -88,7 +88,10 @@ OPC UA 샘플 GUI 프로그램입니다.
 
   - Subscriber(옵션): 데이터를 수신(구독)하는 역할만 함 (경량 클라이언트 역할)
 
-참조
-https://red-nose-cousin.tistory.com/2
-https://github.com/OPCFoundation/UA-.NETStandard
-https://opcfoundation.github.io/UA-.NETStandard/
+* 참조
+
+  - https://red-nose-cousin.tistory.com/2
+
+  - https://github.com/OPCFoundation/UA-.NETStandard/
+
+  - https://opcfoundation.github.io/UA-.NETStandard/
