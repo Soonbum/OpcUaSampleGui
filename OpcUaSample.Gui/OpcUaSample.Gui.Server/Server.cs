@@ -1,14 +1,12 @@
 ﻿using Opc.Ua;
 using Opc.Ua.Configuration;
 using Opc.Ua.Server;
-using Org.BouncyCastle.Asn1.Cmp;
 
 namespace OpcUaSample.Gui.Server;
 
 public partial class Server : Form
 {
     private ApplicationInstance application;
-    //private StandardServer server;
     private MyUaServer server;
 
     public Server()
@@ -17,7 +15,7 @@ public partial class Server : Form
         lblServerStatus.Text = "Stopped";
     }
 
-    private async void btnStartServer_Click(object sender, EventArgs e)
+    private async void BtnStartServer_Click(object sender, EventArgs e)
     {
         try
         {
@@ -109,7 +107,7 @@ public partial class Server : Form
 
             // UI 업데이트 (UI 스레드에서 실행되도록 Invoke 사용 가능하지만, async void에서는 보통 안전)
             lblServerStatus.Text = "서버 실행 중 (Async Mode):\nopc.tcp://localhost:62541/SimpleServer";
-            btnStartServer.Enabled = false;
+            BtnStartServer.Enabled = false;
         }
         catch (Exception ex)
         {
@@ -118,14 +116,14 @@ public partial class Server : Form
         }
     }
 
-    private void btnStopServer_Click(object sender, EventArgs e)
+    private void BtnStopServer_Click(object sender, EventArgs e)
     {
         if (server != null)
         {
             server?.Stop();
             lblServerStatus.Text = "Stopped";
-            btnStartServer.Enabled = true;
-            btnStopServer.Enabled = false;
+            BtnStartServer.Enabled = true;
+            BtnStopServer.Enabled = false;
         }
     }
 }

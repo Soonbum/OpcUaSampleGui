@@ -13,7 +13,7 @@ public partial class Client : Form
         InitializeComponent();
     }
 
-    private async void btnRead_Click(object sender, EventArgs e)
+    private async void BtnRead_Click(object sender, EventArgs e)
     {
         string serverUrl = "opc.tcp://localhost:62541/SimpleServer";
 

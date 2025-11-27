@@ -28,19 +28,19 @@
         /// </summary>
         private void InitializeComponent()
         {
-            btnRead = new Button();
+            BtnRead = new Button();
             txtResult = new TextBox();
             SuspendLayout();
             // 
-            // btnRead
+            // BtnRead
             // 
-            btnRead.Location = new Point(63, 71);
-            btnRead.Name = "btnRead";
-            btnRead.Size = new Size(130, 53);
-            btnRead.TabIndex = 0;
-            btnRead.Text = "Read";
-            btnRead.UseVisualStyleBackColor = true;
-            btnRead.Click += btnRead_Click;
+            BtnRead.Location = new Point(63, 71);
+            BtnRead.Name = "BtnRead";
+            BtnRead.Size = new Size(130, 53);
+            BtnRead.TabIndex = 0;
+            BtnRead.Text = "Read";
+            BtnRead.UseVisualStyleBackColor = true;
+            BtnRead.Click += BtnRead_Click;
             // 
             // txtResult
             // 
@@ -56,7 +56,7 @@
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(257, 145);
             Controls.Add(txtResult);
-            Controls.Add(btnRead);
+            Controls.Add(BtnRead);
             Name = "Client";
             Text = "Client";
             ResumeLayout(false);
@@ -65,7 +65,7 @@
 
         #endregion
 
-        private Button btnRead;
+        private Button BtnRead;
         private TextBox txtResult;
     }
 }

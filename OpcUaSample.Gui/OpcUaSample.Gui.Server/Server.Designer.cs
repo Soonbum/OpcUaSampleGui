@@ -29,8 +29,8 @@
         private void InitializeComponent()
         {
             lblServerStatus = new Label();
-            btnStartServer = new Button();
-            btnStopServer = new Button();
+            BtnStartServer = new Button();
+            BtnStopServer = new Button();
             SuspendLayout();
             // 
             // lblServerStatus
@@ -42,33 +42,33 @@
             lblServerStatus.TabIndex = 0;
             lblServerStatus.Text = "ServerStatus";
             // 
-            // btnStartServer
+            // BtnStartServer
             // 
-            btnStartServer.Location = new Point(28, 85);
-            btnStartServer.Name = "btnStartServer";
-            btnStartServer.Size = new Size(130, 53);
-            btnStartServer.TabIndex = 1;
-            btnStartServer.Text = "StartServer";
-            btnStartServer.UseVisualStyleBackColor = true;
-            btnStartServer.Click += btnStartServer_Click;
+            BtnStartServer.Location = new Point(28, 85);
+            BtnStartServer.Name = "BtnStartServer";
+            BtnStartServer.Size = new Size(130, 53);
+            BtnStartServer.TabIndex = 1;
+            BtnStartServer.Text = "StartServer";
+            BtnStartServer.UseVisualStyleBackColor = true;
+            BtnStartServer.Click += BtnStartServer_Click;
             // 
-            // btnStopServer
+            // BtnStopServer
             // 
-            btnStopServer.Location = new Point(183, 85);
-            btnStopServer.Name = "btnStopServer";
-            btnStopServer.Size = new Size(130, 53);
-            btnStopServer.TabIndex = 2;
-            btnStopServer.Text = "StopServer";
-            btnStopServer.UseVisualStyleBackColor = true;
-            btnStopServer.Click += btnStopServer_Click;
+            BtnStopServer.Location = new Point(183, 85);
+            BtnStopServer.Name = "BtnStopServer";
+            BtnStopServer.Size = new Size(130, 53);
+            BtnStopServer.TabIndex = 2;
+            BtnStopServer.Text = "StopServer";
+            BtnStopServer.UseVisualStyleBackColor = true;
+            BtnStopServer.Click += BtnStopServer_Click;
             // 
             // Server
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(343, 163);
-            Controls.Add(btnStopServer);
-            Controls.Add(btnStartServer);
+            Controls.Add(BtnStopServer);
+            Controls.Add(BtnStartServer);
             Controls.Add(lblServerStatus);
             Name = "Server";
             Text = "Server";
@@ -79,7 +79,7 @@
         #endregion
 
         private Label lblServerStatus;
-        private Button btnStartServer;
-        private Button btnStopServer;
+        private Button BtnStartServer;
+        private Button BtnStopServer;
     }
 }
