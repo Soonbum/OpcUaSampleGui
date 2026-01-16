@@ -76,6 +76,7 @@ public partial class Client : Form
 
             // 버튼 활성화
             BtnConnect.Enabled = false;
+            BtnDisconnect.Enabled = true;
             BtnRead.Enabled = true;
             BtnSubscribe.Enabled = true;
             BtnWrite.Enabled = true;
@@ -83,6 +84,40 @@ public partial class Client : Form
         catch (Exception ex)
         {
             Log($"[Error] 연결 실패: {ex.Message}");
+        }
+    }
+
+    private void BtnDisconnect_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            // 구독이 있다면 먼저 정리
+            if (_subscription != null)
+            {
+                _subscription.Dispose();
+                _subscription = null;
+            }
+
+            if (_session != null)
+            {
+                _session.Close();
+                _session.Dispose();
+                _session = null;
+            }
+
+            Log("서버와의 연결이 끊어졌습니다.");
+
+            // 버튼 상태 복구
+            BtnConnect.Enabled = true;
+            BtnDisconnect.Enabled = false;
+            BtnRead.Enabled = false;
+            BtnSubscribe.Enabled = false;
+            BtnUnsubscribe.Enabled = false;
+            BtnWrite.Enabled = false;
+        }
+        catch (Exception ex)
+        {
+            Log($"[Error] 연결 해제 실패: {ex.Message}");
         }
     }
 
@@ -144,11 +179,35 @@ public partial class Client : Form
 
             Log("[Subscribe] 온도 데이터 실시간 감시 시작...");
             BtnSubscribe.Enabled = false;
+            BtnUnsubscribe.Enabled = true;
         }
         catch (Exception ex)
         {
             Log($"[Error] 구독 실패: {ex.Message}");
             _subscription = null;
+        }
+    }
+
+    private async void BtnUnsubscribe_Click(object sender, EventArgs e)
+    {
+        if (_subscription == null) return;
+
+        try
+        {
+            // 서버에서 구독 삭제
+            await _subscription.DeleteAsync(true);
+            _subscription.Dispose();
+            _subscription = null;
+
+            Log("[Unsubscribe] 구독이 해제되었습니다.");
+
+            // 버튼 상태 전환
+            BtnSubscribe.Enabled = true;
+            BtnUnsubscribe.Enabled = false;
+        }
+        catch (Exception ex)
+        {
+            Log($"[Error] 구독 해제 실패: {ex.Message}");
         }
     }
 
