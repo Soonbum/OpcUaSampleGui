@@ -1,4 +1,5 @@
-﻿using Opc.Ua;
+﻿using System.Collections.Generic;
+using Opc.Ua;
 using Opc.Ua.Configuration;
 using Opc.Ua.Server;
 
@@ -99,7 +100,7 @@ public partial class Server : Form
             }
 
             // 서버 인스턴스 생성 및 노드 매니저 연결
-            server = new MyUaServer();
+            server = new MyUaServer(this);
 
             // 서버 시작 (Async 필수)
             await application.StartAsync(server);
@@ -107,6 +108,7 @@ public partial class Server : Form
             // UI 업데이트 (UI 스레드에서 실행되도록 Invoke 사용 가능하지만, async void에서는 보통 안전)
             lblServerStatus.Text = "서버 실행 중 (Async Mode):\nopc.tcp://localhost:62541/SimpleServer";
             BtnStartServer.Enabled = false;
+            BtnStopServer.Enabled = true;
         }
         catch (Exception ex)
         {
@@ -124,19 +126,101 @@ public partial class Server : Form
             BtnStopServer.Enabled = false;
         }
     }
+
+    public void LogMessage(string message)
+    {
+        if (txtServerLog.InvokeRequired)
+        {
+            txtServerLog.Invoke(new Action(() => LogMessage(message)));
+            return;
+        }
+        txtServerLog.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}\r\n");
+        txtServerLog.ScrollToCaret();
+    }
 }
 
 internal class MyNodeManager_3DPrinter : CustomNodeManager2
 {
+    private Server _mainForm; // UI 접근을 위한 참조
+
     // 노드를 나중에 업데이트하기 위해 멤버 변수로 보관
     private BaseDataVariableState _temperatureNode;
     private BaseDataVariableState _statusNode;
     private System.Threading.Timer _simulationTimer; // 값 변경 시뮬레이션용
 
-    public MyNodeManager_3DPrinter(IServerInternal server, Opc.Ua.ApplicationConfiguration configuration) : base(server, configuration, "http://test.org/UA/SimpleServer")
+    public MyNodeManager_3DPrinter(IServerInternal server, Opc.Ua.ApplicationConfiguration configuration, Server mainForm) : base(server, configuration, "http://test.org/UA/SimpleServer")
     {
+        _mainForm = mainForm;
         // 1초마다 센서 값 변경 시뮬레이션 시작
         _simulationTimer = new System.Threading.Timer(DoSimulation, null, 1000, 1000);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _simulationTimer?.Dispose();
+        }
+        base.Dispose(disposing);
+    }
+
+    // 데이터 읽기 요청 감지
+    public override void Read(
+        OperationContext context,
+        double maxAge,
+        IList<ReadValueId> nodesToRead,
+        IList<DataValue> values,
+        IList<ServiceResult> errors)
+    {
+        _mainForm.LogMessage($"[Read Request] Items: {nodesToRead.Count}");
+        base.Read(context, maxAge, nodesToRead, values, errors);
+    }
+
+    // 데이터 쓰기 요청 감지
+    public override void Write(
+        OperationContext context,
+        IList<WriteValue> nodesToWrite,
+        IList<ServiceResult> results)
+    {
+        foreach (var node in nodesToWrite)
+        {
+            _mainForm.LogMessage($"[Write Request] NodeId: {node.NodeId}, Value: {node.Value.Value}");
+        }
+        base.Write(context, nodesToWrite, results);
+    }
+
+    // 구독(MonitoredItem) 생성 감지 --> 수정 필요
+    public override void CreateMonitoredItems(
+    OperationContext context,
+    uint subscriptionId,
+    double publishingInterval,
+    TimestampsToReturn timestampsToReturn,
+    IList<MonitoredItemCreateRequest> itemsToCreate,
+    IList<ServiceResult> errors,
+    IList<MonitoringFilterResult> filterResults,
+    IList<IMonitoredItem> monitoredItems,
+    bool globalIdIdUsed,
+    ref long lastMonitoredItemId)
+    {
+        _mainForm.LogMessage($"[Subscription Start] Count: {itemsToCreate.Count}");
+
+        //return base.CreateMonitoredItems(
+        //    context, subscriptionId, publishingInterval, timestampsToReturn,
+        //    itemsToCreate, errors, filterResults, monitoredItems,
+        //    globalIdIdUsed, ref lastMonitoredItemId);
+    }
+
+    // 구독(MonitoredItem) 해제 감지 --> 수정 필요
+    public override void DeleteMonitoredItems(
+    OperationContext context,
+    IList<IMonitoredItem> monitoredItems,
+    IList<bool> processedStatus,
+    IList<ServiceResult> errors)
+    {
+        // 서버 UI에 로그 출력
+        _mainForm.LogMessage($"[Subscription End] Items Unsubscribed. Count: {monitoredItems.Count}");
+
+        //return base.DeleteMonitoredItems(context, monitoredItems, processedStatus, errors);
     }
 
     public override void CreateAddressSpace(IDictionary<NodeId, IList<IReference>> externalReferences)
@@ -146,7 +230,7 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
             // Objects 폴더 참조 가져오기 (여기에 자식들을 추가할 것입니다)
             if (!externalReferences.TryGetValue(ObjectIds.ObjectsFolder, out var references))
             {
-                externalReferences[ObjectIds.ObjectsFolder] = references = new List<IReference>();
+                externalReferences[ObjectIds.ObjectsFolder] = references = [];
             }
 
             // =================================================================
@@ -195,7 +279,7 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
     // 헬퍼 함수: 폴더 생성
     private FolderState CreateFolder(NodeState parent, string path, string name)
     {
-        FolderState folder = new FolderState(parent)
+        FolderState folder = new(parent)
         {
             SymbolicName = name,
             ReferenceTypeId = ReferenceTypeIds.Organizes,
@@ -207,14 +291,14 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
             UserWriteMask = AttributeWriteMask.None,
             EventNotifier = EventNotifiers.None
         };
-        if (parent != null) parent.AddChild(folder);
+        parent?.AddChild(folder);
         return folder;
     }
 
     // 헬퍼 함수: 변수 생성
     private BaseDataVariableState CreateVariable(NodeState parent, string path, string name, BuiltInType type, int valueRank)
     {
-        BaseDataVariableState variable = new BaseDataVariableState(parent)
+        BaseDataVariableState variable = new(parent)
         {
             SymbolicName = name,
             ReferenceTypeId = ReferenceTypeIds.Organizes,
@@ -227,7 +311,7 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
             DataType = (uint)type,
             ValueRank = valueRank
         };
-        if (parent != null) parent.AddChild(variable);
+        parent?.AddChild(variable);
         return variable;
     }
 
@@ -242,7 +326,7 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
             double currentTemp = (double)_temperatureNode.Value;
 
             // 랜덤하게 온도 변화 (+- 0.5도)
-            Random rnd = new Random();
+            Random rnd = new();
             currentTemp += (rnd.NextDouble() - 0.5);
 
             // 값 업데이트
@@ -250,13 +334,20 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
             _temperatureNode.Timestamp = DateTime.UtcNow; // 시간 갱신 중요
 
             // [중요] 변경 사항을 구독자(Client)에게 알림
-            _temperatureNode.ClearChangeMasks(SystemContext, false);
+            _temperatureNode.ClearChangeMasks(SystemContext, true);
         }
     }
 }
 
 internal class MyUaServer : StandardServer
 {
+    private Server _mainForm;
+
+    public MyUaServer(Server mainForm)
+    {
+        _mainForm = mainForm;
+    }
+
     // 이 메서드는 서버가 초기화될 때 딱 한 번 호출됩니다.
     protected override MasterNodeManager CreateMasterNodeManager(IServerInternal server, Opc.Ua.ApplicationConfiguration configuration)
     {
@@ -264,7 +355,7 @@ internal class MyUaServer : StandardServer
         {
             // 여기서 내 NodeManager를 리스트에 "직접" 담습니다.
             // (Factory 오류 없이 인스턴스를 바로 넣을 수 있는 유일한 곳입니다.)
-            new MyNodeManager_3DPrinter(server, configuration)
+            new MyNodeManager_3DPrinter(server, configuration, _mainForm)
         };
 
         // MasterNodeManager에게 내 리스트를 전달하며 생성합니다.
