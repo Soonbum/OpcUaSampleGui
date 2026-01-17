@@ -31,7 +31,6 @@
             lblServerStatus = new Label();
             BtnStartServer = new Button();
             BtnStopServer = new Button();
-            txtServerLog = new RichTextBox();
             SuspendLayout();
             // 
             // lblServerStatus
@@ -55,7 +54,6 @@
             // 
             // BtnStopServer
             // 
-            BtnStopServer.Enabled = false;
             BtnStopServer.Location = new Point(183, 85);
             BtnStopServer.Name = "BtnStopServer";
             BtnStopServer.Size = new Size(130, 53);
@@ -64,20 +62,11 @@
             BtnStopServer.UseVisualStyleBackColor = true;
             BtnStopServer.Click += BtnStopServer_Click;
             // 
-            // txtServerLog
-            // 
-            txtServerLog.Location = new Point(28, 158);
-            txtServerLog.Name = "txtServerLog";
-            txtServerLog.Size = new Size(285, 226);
-            txtServerLog.TabIndex = 3;
-            txtServerLog.Text = "";
-            // 
             // Server
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(343, 412);
-            Controls.Add(txtServerLog);
+            ClientSize = new Size(343, 163);
             Controls.Add(BtnStopServer);
             Controls.Add(BtnStartServer);
             Controls.Add(lblServerStatus);
@@ -92,6 +81,5 @@
         private Label lblServerStatus;
         private Button BtnStartServer;
         private Button BtnStopServer;
-        private RichTextBox txtServerLog;
     }
 }

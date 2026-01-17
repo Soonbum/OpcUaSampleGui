@@ -56,7 +56,7 @@ public partial class Client : Form
 
             // '보안 없음' 우선 선택
             var selectedEndpoint = endpoints.FirstOrDefault(e => e.SecurityMode == MessageSecurityMode.None);
-            selectedEndpoint ??= endpoints.First();
+            if (selectedEndpoint == null) selectedEndpoint = endpoints.First();
 
             var endpoint = new ConfiguredEndpoint(null, selectedEndpoint, EndpointConfiguration.Create(config));
 
@@ -128,7 +128,7 @@ public partial class Client : Form
         try
         {
             // HelloWorld 노드 읽기
-            ReadValueId nodeToRead = new()
+            ReadValueId nodeToRead = new ReadValueId
             {
                 NodeId = new NodeId("HelloWorld", 2), // MyNodeManager에서 정의한 ID
                 AttributeId = Attributes.Value
@@ -156,20 +156,16 @@ public partial class Client : Form
             }
 
             // 구독 컨테이너 생성 (1초 간격)
-            _subscription = new Subscription(_session.DefaultSubscription)
-            {
-                PublishingEnabled = true,
-                PublishingInterval = 1000
-            };
+            _subscription = new Subscription(_session.DefaultSubscription);
+            _subscription.PublishingEnabled = true;
+            _subscription.PublishingInterval = 1000;
 
             // 감시할 아이템(Temperature) 생성
-            MonitoredItem item = new(_subscription.DefaultItem)
-            {
-                StartNodeId = new NodeId("3DPrinter/Temperature", 2), // 서버의 온도 노드 ID
-                AttributeId = Attributes.Value,
-                DisplayName = "Temperature",
-                SamplingInterval = 1000
-            };
+            MonitoredItem item = new MonitoredItem(_subscription.DefaultItem);
+            item.StartNodeId = new NodeId("3DPrinter/Temperature", 2); // 서버의 온도 노드 ID
+            item.AttributeId = Attributes.Value;
+            item.DisplayName = "Temperature";
+            item.SamplingInterval = 1000;
 
             // 알림 이벤트 연결
             item.Notification += OnNotification;
@@ -223,7 +219,7 @@ public partial class Client : Form
         try
         {
             // IsActive 노드에 'true' 값 쓰기
-            WriteValue valueToWrite = new()
+            WriteValue valueToWrite = new WriteValue
             {
                 NodeId = new NodeId("3DPrinter/IsActive", 2), // 경로 주의: 폴더/변수명
                 AttributeId = Attributes.Value
@@ -234,7 +230,7 @@ public partial class Client : Form
             valueToWrite.Value.ServerTimestamp = DateTime.MinValue;
             valueToWrite.Value.SourceTimestamp = DateTime.MinValue;
 
-            WriteValueCollection valuesToWrite = [valueToWrite];
+            WriteValueCollection valuesToWrite = new WriteValueCollection { valueToWrite };
 
             // [수정된 부분] WriteAsync 호출 방식 변경
             // out 파라미터 제거 -> WriteResponse 객체로 반환받음
