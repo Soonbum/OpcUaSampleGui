@@ -58,7 +58,7 @@ public partial class Server : Form
                         StoreType = @"Directory",
                         StorePath = @"%CommonApplicationData%\OPC Foundation\CertificateStores\RejectedCertificates"
                     },
-                    AutoAcceptUntrustedCertificates = true, // 인증 자동 수락 (테스트용)
+                    AutoAcceptUntrustedCertificates = true, // 인증 자동 수락 (테스트용) --> 인증을 강화하려면 false로 바꿀 것
                     AddAppCertToTrustedStore = true
                 },
 
@@ -76,7 +76,7 @@ public partial class Server : Form
                         SecurityMode = MessageSecurityMode.SignAndEncrypt,
                         SecurityPolicyUri = SecurityPolicies.Basic256Sha256
                     },
-                    new ServerSecurityPolicy // 보안 없음 모드 (테스트용)
+                    new ServerSecurityPolicy // 보안 없음 모드 (테스트용) --> 인증을 강화하려면 제거할 것
                     {
                         SecurityMode = MessageSecurityMode.None,
                         SecurityPolicyUri = SecurityPolicies.None

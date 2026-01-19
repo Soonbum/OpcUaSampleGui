@@ -54,11 +54,17 @@ public partial class Client : Form
             using var discoveryClient = DiscoveryClient.Create(uri, EndpointConfiguration.Create(config));
             var endpoints = await discoveryClient.GetEndpointsAsync(null);
 
-            // '보안 없음' 우선 선택
+            // '보안 없음' 우선 선택 (테스트용) --> 인증을 강화하려면 아래 코멘트 처리된 코드를 대신 사용할 것
             var selectedEndpoint = endpoints.FirstOrDefault(e => e.SecurityMode == MessageSecurityMode.None);
             if (selectedEndpoint == null) selectedEndpoint = endpoints.First();
 
             var endpoint = new ConfiguredEndpoint(null, selectedEndpoint, EndpointConfiguration.Create(config));
+
+            //// 보안 모드가 SignAndEncrypt인 엔드포인트 탐색
+            //var selectedEndpoint = endpoints.FirstOrDefault(e => e.SecurityMode == MessageSecurityMode.SignAndEncrypt);
+            //if (selectedEndpoint == null) throw new Exception("서버에서 보안 연결(SignAndEncrypt)을 지원하지 않습니다.");
+
+            //var endpoint = new ConfiguredEndpoint(null, selectedEndpoint, EndpointConfiguration.Create(config));
 
             // 세션 생성 및 연결
             _session = await Session.Create(
