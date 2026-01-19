@@ -1,4 +1,5 @@
-﻿using Opc.Ua;
+﻿using Microsoft.VisualBasic.Logging;
+using Opc.Ua;
 using Opc.Ua.Configuration;
 using Opc.Ua.Server;
 
@@ -123,7 +124,7 @@ public partial class Server : Form
             }
 
             // 서버 인스턴스 생성 및 노드 매니저 연결
-            server = new MyUaServer();
+            server = new MyUaServer(Log);
 
             // 서버 시작 (Async 필수)
             await application.StartAsync(server);
@@ -167,10 +168,74 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
     private BaseDataVariableState _statusNode;
     private System.Threading.Timer _simulationTimer; // 값 변경 시뮬레이션용
 
-    public MyNodeManager_3DPrinter(IServerInternal server, Opc.Ua.ApplicationConfiguration configuration) : base(server, configuration, "http://test.org/UA/SimpleServer")
+    private readonly Action<string> _logAction; // 로그 기록을 위한 델리게이트
+
+    public MyNodeManager_3DPrinter(IServerInternal server, Opc.Ua.ApplicationConfiguration configuration, Action<string> logAction) : base(server, configuration, "http://test.org/UA/SimpleServer")
     {
-        // 1초마다 센서 값 변경 시뮬레이션 시작
-        _simulationTimer = new System.Threading.Timer(DoSimulation, null, 1000, 1000);
+        _logAction = logAction;
+        _simulationTimer = new System.Threading.Timer(DoSimulation, null, 1000, 1000);  // 1초마다 센서 값 변경 시뮬레이션 시작
+    }
+
+    // [1. 읽기 요청 로그]
+    public override void Read(
+        OperationContext context,
+        double maxAge,
+        IList<ReadValueId> nodesToRead,
+        IList<DataValue> values,
+        IList<ServiceResult> errors)
+    {
+        base.Read(context, maxAge, nodesToRead, values, errors);
+        foreach (var node in nodesToRead)
+        {
+            _logAction($"[Read Request] Client: {context.Session.ToString()}, Node: {node.NodeId}");
+        }
+    }
+
+    // [2. 쓰기 요청 로그]
+    public override void Write(
+        OperationContext context,
+        IList<WriteValue> nodesToWrite,
+        IList<ServiceResult> errors)
+    {
+        base.Write(context, nodesToWrite, errors);
+        foreach (var node in nodesToWrite)
+        {
+            _logAction($"[Write Request] Client: {context.Session.ToString()}, Node: {node.NodeId}, Value: {node.Value.Value}");
+        }
+    }
+
+    // [3. 구독(MonitoredItem) 생성 로그]
+    public override void CreateMonitoredItems(
+        OperationContext context,
+        uint subscriptionId,
+        double publishingInterval,
+        TimestampsToReturn timestampsToReturn,
+        IList<MonitoredItemCreateRequest> itemsToCreate,
+        IList<ServiceResult> errors,
+        IList<MonitoringFilterResult> filterErrors,
+        IList<IMonitoredItem> monitoredItems,
+        bool createDurable,
+        ref long globalIdCounter)
+    {
+        base.CreateMonitoredItems(context, subscriptionId, publishingInterval, timestampsToReturn, itemsToCreate, errors, filterErrors, monitoredItems, createDurable, ref globalIdCounter);
+        foreach (var item in itemsToCreate)
+        {
+            _logAction($"[Subscribe] Client: {context.Session.ToString()}, Node: {item.ItemToMonitor.NodeId}");
+        }
+    }
+
+    // [4. 구독 해제 로그]
+    public override void DeleteMonitoredItems(
+        OperationContext context,
+        IList<IMonitoredItem> monitoredItems,
+        IList<bool> processedItems,
+        IList<ServiceResult> errors)
+    {
+        base.DeleteMonitoredItems(context, monitoredItems, processedItems, errors);
+        foreach (var item in monitoredItems)
+        {
+            _logAction($"[Unsubscribe] Client: {context.Session.ToString()}, Node: {item.NodeId}");
+        }
     }
 
     public override void CreateAddressSpace(IDictionary<NodeId, IList<IReference>> externalReferences)
@@ -291,6 +356,13 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
 
 internal class MyUaServer : StandardServer
 {
+    private readonly Action<string> _logAction;
+
+    public MyUaServer(Action<string> logAction)
+    {
+        _logAction = logAction;
+    }
+
     // 이 메서드는 서버가 초기화될 때 딱 한 번 호출됩니다.
     protected override MasterNodeManager CreateMasterNodeManager(IServerInternal server, Opc.Ua.ApplicationConfiguration configuration)
     {
@@ -298,7 +370,7 @@ internal class MyUaServer : StandardServer
         {
             // 여기서 내 NodeManager를 리스트에 "직접" 담습니다.
             // (Factory 오류 없이 인스턴스를 바로 넣을 수 있는 유일한 곳입니다.)
-            new MyNodeManager_3DPrinter(server, configuration)
+            new MyNodeManager_3DPrinter(server, configuration, _logAction)
         };
 
         // MasterNodeManager에게 내 리스트를 전달하며 생성합니다.

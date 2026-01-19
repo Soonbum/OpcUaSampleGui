@@ -45,7 +45,7 @@
             // 
             // BtnStartServer
             // 
-            BtnStartServer.Location = new Point(28, 85);
+            BtnStartServer.Location = new Point(463, 12);
             BtnStartServer.Name = "BtnStartServer";
             BtnStartServer.Size = new Size(130, 53);
             BtnStartServer.TabIndex = 1;
@@ -55,7 +55,7 @@
             // 
             // BtnStopServer
             // 
-            BtnStopServer.Location = new Point(183, 85);
+            BtnStopServer.Location = new Point(463, 71);
             BtnStopServer.Name = "BtnStopServer";
             BtnStopServer.Size = new Size(130, 53);
             BtnStopServer.TabIndex = 2;
@@ -70,14 +70,14 @@
             TxtLog.Multiline = true;
             TxtLog.Name = "TxtLog";
             TxtLog.ScrollBars = ScrollBars.Vertical;
-            TxtLog.Size = new Size(285, 210);
+            TxtLog.Size = new Size(565, 210);
             TxtLog.TabIndex = 3;
             // 
             // Server
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(343, 392);
+            ClientSize = new Size(612, 392);
             Controls.Add(TxtLog);
             Controls.Add(BtnStopServer);
             Controls.Add(BtnStartServer);
