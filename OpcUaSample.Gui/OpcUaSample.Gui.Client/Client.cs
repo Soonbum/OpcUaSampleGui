@@ -38,10 +38,11 @@ public partial class Client : Form
                 SecurityConfiguration = new SecurityConfiguration
                 {
                     ApplicationCertificate = new CertificateIdentifier { StoreType = @"Directory", StorePath = @"%CommonApplicationData%\OPC Foundation\CertificateStores\MachineDefault", SubjectName = "SimpleClient" },
-                    AutoAcceptUntrustedCertificates = true,
                     TrustedIssuerCertificates = new CertificateTrustList { StoreType = @"Directory", StorePath = @"%CommonApplicationData%\OPC Foundation\CertificateStores\UA Certificate Authorities" },
                     TrustedPeerCertificates = new CertificateTrustList { StoreType = @"Directory", StorePath = @"%CommonApplicationData%\OPC Foundation\CertificateStores\UA Applications" },
-                    RejectedCertificateStore = new CertificateTrustList { StoreType = @"Directory", StorePath = @"%CommonApplicationData%\OPC Foundation\CertificateStores\RejectedCertificates" }
+                    RejectedCertificateStore = new CertificateTrustList { StoreType = @"Directory", StorePath = @"%CommonApplicationData%\OPC Foundation\CertificateStores\RejectedCertificates" },
+                    AutoAcceptUntrustedCertificates = false,
+                    AddAppCertToTrustedStore = false
                 },
                 TransportQuotas = new TransportQuotas { OperationTimeout = 15000 },
                 ClientConfiguration = new ClientConfiguration { DefaultSessionTimeout = 60000 }
@@ -49,22 +50,39 @@ public partial class Client : Form
 
             await config.ValidateAsync(ApplicationType.Client);
 
+            // 인증서 검증 이벤트 핸들러 연결
+            config.CertificateValidator.CertificateValidation += (validator, args) =>
+            {
+                if (args.Error.StatusCode == StatusCodes.Good)
+                {
+                    args.Accept = true;
+                }
+                else if (args.Error.StatusCode == StatusCodes.BadCertificateUntrusted)
+                {
+                    // 서버 인증서를 수락할지 사용자에게 확인
+                    var result = MessageBox.Show(
+                        $"서버의 인증서를 신뢰하시겠습니까?\nSubject: {args.Certificate.Subject}",
+                        "보안 경고 (클라이언트 측)",
+                        MessageBoxButtons.YesNo);
+
+                    args.Accept = (result == DialogResult.Yes);
+                }
+            };
+            
+            // 클라이언트 자신의 인증서가 없으면 생성 (이게 없으면 연결 자체가 안됨)
+            ApplicationInstance clientApp = new ApplicationInstance { ApplicationConfiguration = config };
+            await clientApp.CheckApplicationInstanceCertificatesAsync(false, 2048);
+
             // 엔드포인트 찾기
             var uri = new Uri(ServerUrl);
             using var discoveryClient = DiscoveryClient.Create(uri, EndpointConfiguration.Create(config));
             var endpoints = await discoveryClient.GetEndpointsAsync(null);
 
-            // '보안 없음' 우선 선택 (테스트용) --> 인증을 강화하려면 아래 코멘트 처리된 코드를 대신 사용할 것
-            var selectedEndpoint = endpoints.FirstOrDefault(e => e.SecurityMode == MessageSecurityMode.None);
-            if (selectedEndpoint == null) selectedEndpoint = endpoints.First();
+            // 보안 모드가 SignAndEncrypt인 엔드포인트 탐색
+            var selectedEndpoint = endpoints.FirstOrDefault(e => e.SecurityMode == MessageSecurityMode.SignAndEncrypt);
+            if (selectedEndpoint == null) throw new Exception("서버에서 보안 연결(SignAndEncrypt)을 지원하지 않습니다.");
 
             var endpoint = new ConfiguredEndpoint(null, selectedEndpoint, EndpointConfiguration.Create(config));
-
-            //// 보안 모드가 SignAndEncrypt인 엔드포인트 탐색
-            //var selectedEndpoint = endpoints.FirstOrDefault(e => e.SecurityMode == MessageSecurityMode.SignAndEncrypt);
-            //if (selectedEndpoint == null) throw new Exception("서버에서 보안 연결(SignAndEncrypt)을 지원하지 않습니다.");
-
-            //var endpoint = new ConfiguredEndpoint(null, selectedEndpoint, EndpointConfiguration.Create(config));
 
             // 세션 생성 및 연결
             _session = await Session.Create(

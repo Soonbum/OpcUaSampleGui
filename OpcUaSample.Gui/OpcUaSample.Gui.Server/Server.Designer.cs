@@ -31,6 +31,7 @@
             lblServerStatus = new Label();
             BtnStartServer = new Button();
             BtnStopServer = new Button();
+            TxtLog = new TextBox();
             SuspendLayout();
             // 
             // lblServerStatus
@@ -62,11 +63,22 @@
             BtnStopServer.UseVisualStyleBackColor = true;
             BtnStopServer.Click += BtnStopServer_Click;
             // 
+            // TxtLog
+            // 
+            TxtLog.Font = new Font("맑은 고딕", 10F);
+            TxtLog.Location = new Point(28, 156);
+            TxtLog.Multiline = true;
+            TxtLog.Name = "TxtLog";
+            TxtLog.ScrollBars = ScrollBars.Vertical;
+            TxtLog.Size = new Size(285, 210);
+            TxtLog.TabIndex = 3;
+            // 
             // Server
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(343, 163);
+            ClientSize = new Size(343, 392);
+            Controls.Add(TxtLog);
             Controls.Add(BtnStopServer);
             Controls.Add(BtnStartServer);
             Controls.Add(lblServerStatus);
@@ -81,5 +93,6 @@
         private Label lblServerStatus;
         private Button BtnStartServer;
         private Button BtnStopServer;
+        private TextBox TxtLog;
     }
 }

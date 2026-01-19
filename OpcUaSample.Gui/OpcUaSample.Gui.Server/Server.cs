@@ -58,8 +58,8 @@ public partial class Server : Form
                         StoreType = @"Directory",
                         StorePath = @"%CommonApplicationData%\OPC Foundation\CertificateStores\RejectedCertificates"
                     },
-                    AutoAcceptUntrustedCertificates = true, // 인증 자동 수락 (테스트용) --> 인증을 강화하려면 false로 바꿀 것
-                    AddAppCertToTrustedStore = true
+                    AutoAcceptUntrustedCertificates = false,
+                    AddAppCertToTrustedStore = false
                 },
 
                 // 전송 쿼터 설정 (기본값)
@@ -75,11 +75,6 @@ public partial class Server : Form
                     {
                         SecurityMode = MessageSecurityMode.SignAndEncrypt,
                         SecurityPolicyUri = SecurityPolicies.Basic256Sha256
-                    },
-                    new ServerSecurityPolicy // 보안 없음 모드 (테스트용) --> 인증을 강화하려면 제거할 것
-                    {
-                        SecurityMode = MessageSecurityMode.None,
-                        SecurityPolicyUri = SecurityPolicies.None
                     }
                 }
                 }
@@ -87,6 +82,35 @@ public partial class Server : Form
 
             // 설정 유효성 검사 (필수)
             await config.ValidateAsync(ApplicationType.Server);
+
+            // 인증서 검증 이벤트 핸들러 연결
+            config.CertificateValidator.CertificateValidation += (validator, args) =>
+            {
+                // 이미 신뢰된 인증서라면 통과
+                if (args.Error.StatusCode == StatusCodes.Good)
+                {
+                    args.Accept = true;
+                }
+                // 신뢰할 수 없는 인증서(Untrusted)인 경우 처리
+                else if (args.Error.StatusCode == StatusCodes.BadCertificateUntrusted)
+                {
+                    // 사용자에게 인증서 수락 여부를 묻는 메시지 박스 표시
+                    var result = MessageBox.Show(
+                        $"{args.Certificate.Subject}의 접속을 허용하시겠습니까?",
+                        "보안 경고",
+                        MessageBoxButtons.YesNo);
+
+                    args.Accept = (result == DialogResult.Yes);
+
+                    // 수락한 인증서를 신뢰 목록(Trusted)으로 영구적으로 이동시키고 싶다면:
+                    // validator.UpdateMasterAliases(); // 필요 시 구현
+
+                    this.Invoke(new Action(() =>
+                    {
+                        Log($"[Security] 새로운 클라이언트 인증서 수락됨: {args.Certificate.Subject}");
+                    }));
+                }
+            };
 
             // 검증된 설정을 애플리케이션에 주입
             application.ApplicationConfiguration = config;
@@ -123,6 +147,16 @@ public partial class Server : Form
             BtnStartServer.Enabled = true;
             BtnStopServer.Enabled = false;
         }
+    }
+
+    private void Log(string message)
+    {
+        if (TxtLog.InvokeRequired)
+        {
+            TxtLog.Invoke(new Action(() => Log(message)));
+            return;
+        }
+        TxtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}\r\n");
     }
 }
 
