@@ -60,7 +60,7 @@ public partial class Server : Form
                         StorePath = @"%CommonApplicationData%\OPC Foundation\CertificateStores\RejectedCertificates"
                     },
                     AutoAcceptUntrustedCertificates = false,
-                    AddAppCertToTrustedStore = true
+                    AddAppCertToTrustedStore = false
                 },
 
                 // 전송 쿼터 설정 (기본값)
@@ -85,7 +85,7 @@ public partial class Server : Form
             await config.ValidateAsync(ApplicationType.Server);
 
             // 인증서 검증 이벤트 핸들러 연결
-            config.CertificateValidator.CertificateValidation += (validator, args) =>
+            config.CertificateValidator.CertificateValidation += async (validator, args) =>
             {
                 // 이미 신뢰된 인증서라면 통과
                 if (args.Error.StatusCode == StatusCodes.Good)
@@ -103,8 +103,28 @@ public partial class Server : Form
 
                     args.Accept = (result == DialogResult.Yes);
 
-                    // 수락한 인증서를 신뢰 목록(Trusted)으로 영구적으로 이동시키고 싶다면:
-                    // validator.UpdateMasterAliases(); // 필요 시 구현
+                    try
+                    {
+                        // 실제 신뢰 저장소(Store) 객체를 가져옵니다.
+                        var store = config.SecurityConfiguration.TrustedPeerCertificates.OpenStore();
+                        try
+                        {
+                            // 인증서를 물리적 파일로 저장합니다.
+                            await store.AddAsync(args.Certificate);
+                            Log("인증서가 신뢰 저장소 파일로 저장되었습니다.");
+                        }
+                        finally
+                        {
+                            store.Close();
+                        }
+
+                        // 검증기에 변경 사항을 즉시 반영합니다.
+                        await validator.UpdateAsync(config.SecurityConfiguration);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"인증서 저장 실패: {ex.Message}");
+                    }
 
                     this.Invoke(new Action(() =>
                     {

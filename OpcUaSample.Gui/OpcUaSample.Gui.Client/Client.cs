@@ -45,7 +45,7 @@ public partial class Client : Form
                     TrustedPeerCertificates = new CertificateTrustList { StoreType = @"Directory", StorePath = @"%CommonApplicationData%\OPC Foundation\CertificateStores\UA Applications" },
                     RejectedCertificateStore = new CertificateTrustList { StoreType = @"Directory", StorePath = @"%CommonApplicationData%\OPC Foundation\CertificateStores\RejectedCertificates" },
                     AutoAcceptUntrustedCertificates = false,
-                    AddAppCertToTrustedStore = true
+                    AddAppCertToTrustedStore = false
                 },
                 TransportQuotas = new TransportQuotas { OperationTimeout = 15000 },
                 ClientConfiguration = new ClientConfiguration { DefaultSessionTimeout = 60000 }
@@ -54,7 +54,7 @@ public partial class Client : Form
             await config.ValidateAsync(ApplicationType.Client);
 
             // 인증서 검증 이벤트 핸들러 연결
-            config.CertificateValidator.CertificateValidation += (validator, args) =>
+            config.CertificateValidator.CertificateValidation += async (validator, args) =>
             {
                 if (args.Error.StatusCode == StatusCodes.Good)
                 {
@@ -68,7 +68,33 @@ public partial class Client : Form
                         "보안 경고 (클라이언트 측)",
                         MessageBoxButtons.YesNo);
 
-                    args.Accept = (result == DialogResult.Yes);
+                    if (result == DialogResult.Yes)
+                    {
+                        args.Accept = true;
+
+                        try
+                        {
+                            // 실제 신뢰 저장소(Store) 객체를 가져옵니다.
+                            var store = config.SecurityConfiguration.TrustedPeerCertificates.OpenStore();
+                            try
+                            {
+                                // 인증서를 물리적 파일로 저장합니다.
+                                await store.AddAsync(args.Certificate);
+                                Log("인증서가 신뢰 저장소 파일로 저장되었습니다.");
+                            }
+                            finally
+                            {
+                                store.Close();
+                            }
+
+                            // 검증기에 변경 사항을 즉시 반영합니다.
+                            await validator.UpdateAsync(config.SecurityConfiguration);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log($"인증서 저장 실패: {ex.Message}");
+                        }
+                    }
                 }
             };
             
