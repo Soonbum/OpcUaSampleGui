@@ -71,13 +71,13 @@ public partial class Server : Form
                 {
                     BaseAddresses = { "opc.tcp://localhost:62541/SimpleServer" },
                     SecurityPolicies =
-                {
-                    new ServerSecurityPolicy
                     {
-                        SecurityMode = MessageSecurityMode.SignAndEncrypt,
-                        SecurityPolicyUri = SecurityPolicies.Basic256Sha256
+                        new ServerSecurityPolicy
+                        {
+                            SecurityMode = MessageSecurityMode.SignAndEncrypt,
+                            SecurityPolicyUri = SecurityPolicies.Basic256Sha256
+                        }
                     }
-                }
                 }
             };
 
@@ -204,7 +204,7 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
         base.Read(context, maxAge, nodesToRead, values, errors);
         foreach (var node in nodesToRead)
         {
-            _logAction($"[Read Request] Client: {context.Session.ToString()}, Node: {node.NodeId}");
+            _logAction($"[Read Request] Client: {context.Session.Id}, Node: {node.NodeId}");
         }
     }
 
@@ -217,7 +217,7 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
         base.Write(context, nodesToWrite, errors);
         foreach (var node in nodesToWrite)
         {
-            _logAction($"[Write Request] Client: {context.Session.ToString()}, Node: {node.NodeId}, Value: {node.Value.Value}");
+            _logAction($"[Write Request] Client: {context.Session.Id}, Node: {node.NodeId}, Value: {node.Value.Value}");
         }
     }
 
@@ -237,7 +237,7 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
         base.CreateMonitoredItems(context, subscriptionId, publishingInterval, timestampsToReturn, itemsToCreate, errors, filterErrors, monitoredItems, createDurable, ref globalIdCounter);
         foreach (var item in itemsToCreate)
         {
-            _logAction($"[Subscribe] Client: {context.Session.ToString()}, Node: {item.ItemToMonitor.NodeId}");
+            _logAction($"[Subscribe] Client: {context.Session.Id}, Node: {item.ItemToMonitor.NodeId}");
         }
     }
 
@@ -251,7 +251,7 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
         base.DeleteMonitoredItems(context, monitoredItems, processedItems, errors);
         foreach (var item in monitoredItems)
         {
-            _logAction($"[Unsubscribe] Client: {context.Session.ToString()}, Node: {item.NodeId}");
+            _logAction($"[Unsubscribe] Client: {context.Session.Id}, Node: {item.NodeId}");
         }
     }
 
@@ -262,14 +262,14 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
             // Objects 폴더 참조 가져오기 (여기에 자식들을 추가할 것입니다)
             if (!externalReferences.TryGetValue(ObjectIds.ObjectsFolder, out var references))
             {
-                externalReferences[ObjectIds.ObjectsFolder] = references = new List<IReference>();
+                externalReferences[ObjectIds.ObjectsFolder] = references = [];
             }
 
             // =================================================================
             // 1. Hello World 노드 생성
             // =================================================================
             BaseDataVariableState helloNode = CreateVariable(null, "HelloWorld", "HelloWorld", BuiltInType.String, ValueRanks.Scalar);
-            helloNode.Value = "Hello World is Back!";
+            helloNode.Value = "Hello World!";
             helloNode.AccessLevel = AccessLevels.CurrentRead;
 
             // 노드 매니저에 등록
@@ -311,7 +311,7 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
     // 헬퍼 함수: 폴더 생성
     private FolderState CreateFolder(NodeState parent, string path, string name)
     {
-        FolderState folder = new FolderState(parent)
+        FolderState folder = new(parent)
         {
             SymbolicName = name,
             ReferenceTypeId = ReferenceTypeIds.Organizes,
@@ -323,14 +323,14 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
             UserWriteMask = AttributeWriteMask.None,
             EventNotifier = EventNotifiers.None
         };
-        if (parent != null) parent.AddChild(folder);
+        parent?.AddChild(folder);
         return folder;
     }
 
     // 헬퍼 함수: 변수 생성
     private BaseDataVariableState CreateVariable(NodeState parent, string path, string name, BuiltInType type, int valueRank)
     {
-        BaseDataVariableState variable = new BaseDataVariableState(parent)
+        BaseDataVariableState variable = new(parent)
         {
             SymbolicName = name,
             ReferenceTypeId = ReferenceTypeIds.Organizes,
@@ -343,7 +343,7 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
             DataType = (uint)type,
             ValueRank = valueRank
         };
-        if (parent != null) parent.AddChild(variable);
+        parent?.AddChild(variable);
         return variable;
     }
 
@@ -358,7 +358,7 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
             double currentTemp = (double)_temperatureNode.Value;
 
             // 랜덤하게 온도 변화 (+- 0.5도)
-            Random rnd = new Random();
+            Random rnd = new();
             currentTemp += (rnd.NextDouble() - 0.5);
 
             // 값 업데이트
