@@ -98,7 +98,7 @@ public partial class Server : Form
                     // 사용자에게 인증서 수락 여부를 묻는 메시지 박스 표시
                     var result = MessageBox.Show(
                         $"{args.Certificate.Subject}의 접속을 허용하시겠습니까?",
-                        "보안 경고",
+                        "보안 경고 (서버 측)",
                         MessageBoxButtons.YesNo);
 
                     args.Accept = (result == DialogResult.Yes);
