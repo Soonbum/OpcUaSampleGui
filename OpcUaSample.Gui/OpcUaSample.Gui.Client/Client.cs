@@ -13,6 +13,9 @@ public partial class Client : Form
     private Subscription _subscription;
     private const string ServerUrl = "opc.tcp://localhost:62541/SimpleServer";
 
+    private SessionReconnectHandler _reconnectHandler;
+    private const int ReconnectInterval = 5000; // 5초마다 재접속 시도
+
     public Client()
     {
         InitializeComponent();
@@ -42,7 +45,7 @@ public partial class Client : Form
                     TrustedPeerCertificates = new CertificateTrustList { StoreType = @"Directory", StorePath = @"%CommonApplicationData%\OPC Foundation\CertificateStores\UA Applications" },
                     RejectedCertificateStore = new CertificateTrustList { StoreType = @"Directory", StorePath = @"%CommonApplicationData%\OPC Foundation\CertificateStores\RejectedCertificates" },
                     AutoAcceptUntrustedCertificates = false,
-                    AddAppCertToTrustedStore = false
+                    AddAppCertToTrustedStore = true
                 },
                 TransportQuotas = new TransportQuotas { OperationTimeout = 15000 },
                 ClientConfiguration = new ClientConfiguration { DefaultSessionTimeout = 60000 }
@@ -95,6 +98,7 @@ public partial class Client : Form
                 new UserIdentity(new AnonymousIdentityToken()),
                 []
             );
+            _session.KeepAlive += Session_KeepAlive; // 연결 상태 감시 이벤트
 
             Log($"서버 연결 성공! (SessionId: {_session.SessionId})");
 
@@ -303,6 +307,41 @@ public partial class Client : Form
     private void UpdateLogWithTemp(string name, object value)
     {
         Log($"[Event] {name} 변경됨: {value}");
+    }
+
+    // 서버와 통신이 잘 되고 있는지 주기적으로 호출됨
+    private void Session_KeepAlive(ISession session, KeepAliveEventArgs e)
+    {
+        // 연결 상태가 정상이 아닐 때 (예: 서버 종료, 네트워크 단선)
+        if (ServiceResult.IsBad(e.Status))
+        {
+            if (_reconnectHandler == null)
+            {
+                Log("연결 끊김 감지! 재접속 시도 중...");
+                _reconnectHandler = new SessionReconnectHandler();
+
+                // 재접속 핸들러 시작 (5초 간격으로 시도)
+                _reconnectHandler.BeginReconnect(_session, ReconnectInterval, Server_ReconnectComplete);
+            }
+        }
+    }
+
+    // 재접속이 성공했을 때 호출됨
+    private void Server_ReconnectComplete(object sender, EventArgs e)
+    {
+        // UI 스레드에서 실행되도록 Invoke 사용
+        this.Invoke(new Action(() =>
+        {
+            // 핸들러가 성공적으로 재접속을 완료하면 새 세션이 할당됨
+            if (!Object.ReferenceEquals(_reconnectHandler.Session, _session))
+            {
+                _session = (Session)_reconnectHandler.Session;
+                Log("서버 재접속 성공!");
+            }
+
+            _reconnectHandler.Dispose();
+            _reconnectHandler = null;
+        }));
     }
 
     // =============================================================

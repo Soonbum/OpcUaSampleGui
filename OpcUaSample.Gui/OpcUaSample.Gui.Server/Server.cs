@@ -60,7 +60,7 @@ public partial class Server : Form
                         StorePath = @"%CommonApplicationData%\OPC Foundation\CertificateStores\RejectedCertificates"
                     },
                     AutoAcceptUntrustedCertificates = false,
-                    AddAppCertToTrustedStore = false
+                    AddAppCertToTrustedStore = true
                 },
 
                 // 전송 쿼터 설정 (기본값)
@@ -131,7 +131,6 @@ public partial class Server : Form
 
             // UI 업데이트 (UI 스레드에서 실행되도록 Invoke 사용 가능하지만, async void에서는 보통 안전)
             lblServerStatus.Text = "서버 실행 중 (Async Mode):\nopc.tcp://localhost:62541/SimpleServer";
-            BtnStartServer.Enabled = false;
         }
         catch (Exception ex)
         {
@@ -145,8 +144,6 @@ public partial class Server : Form
         {
             server?.Stop();
             lblServerStatus.Text = "Stopped";
-            BtnStartServer.Enabled = true;
-            BtnStopServer.Enabled = false;
         }
     }
 
