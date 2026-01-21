@@ -173,7 +173,7 @@ public partial class Server : Form
     {
         if (server != null)
         {
-            server?.Stop();
+            server?.Dispose();
             lblServerStatus.Text = "Stopped";
         }
     }
@@ -386,14 +386,14 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
     private void LogHistoryData(NodeId nodeId, object value, StatusCode status)
     {
         string line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{nodeId},{value},{status}\n";
-        File.AppendAllText(hdaFilePath, line);
+        File.AppendAllTextAsync(hdaFilePath, line);
     }
 
     // [HEA (Event History) 구현] 특정 이벤트(로그인, 오류 등) 발생 시 기록
     public void LogHistoryEvent(string eventType, string message, string user)
     {
         string line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{eventType},{message},{user}\n";
-        File.AppendAllText(heaFilePath, line);
+        File.AppendAllTextAsync(heaFilePath, line);
     }
 
     // [통계 (Aggregates) 조회용 샘플] 최근 10개 데이터의 평균 계산
