@@ -245,6 +245,14 @@ public partial class Client : Form
                 SamplingInterval = 1000
             };
 
+            // 0.1 이상의 절대값 변화가 있을 때만 서버가 데이터를 전송함
+            item.Filter = new DataChangeFilter()
+            {
+                Trigger = DataChangeTrigger.StatusValue,
+                DeadbandType = (uint)DeadbandType.Absolute,
+                DeadbandValue = 0.1
+            };
+
             // 알림 이벤트 연결
             item.Notification += OnNotification;
 

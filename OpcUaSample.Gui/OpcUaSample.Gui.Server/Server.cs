@@ -214,6 +214,15 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
             File.WriteAllText(heaFilePath, "Timestamp,EventType,Message,User\n");
     }
 
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _simulationTimer?.Dispose(); // 타이머 정지 및 해제
+        }
+        base.Dispose(disposing);
+    }
+
     // [1. 읽기 요청 로그]
     public override void Read(
         OperationContext context,
