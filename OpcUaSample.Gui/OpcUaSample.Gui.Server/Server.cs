@@ -198,10 +198,20 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
 
     private readonly Action<string> _logAction; // 로그 기록을 위한 델리게이트
 
+    // 로그 파일 이름
+    private string hdaFilePath = "HistoryData.csv";
+    private string heaFilePath = "HistoryEvents.csv";
+
     public MyNodeManager_3DPrinter(IServerInternal server, Opc.Ua.ApplicationConfiguration configuration, Action<string> logAction) : base(server, configuration, "http://test.org/UA/SimpleServer")
     {
         _logAction = logAction;
         _simulationTimer = new System.Threading.Timer(DoSimulation, null, 1000, 1000);  // 1초마다 센서 값 변경 시뮬레이션 시작
+
+        // 로그 파일 초기화 (헤더 생성)
+        if (!File.Exists(hdaFilePath))
+            File.WriteAllText(hdaFilePath, "Timestamp,NodeId,Value,Status\n");
+        if (!File.Exists(heaFilePath))
+            File.WriteAllText(heaFilePath, "Timestamp,EventType,Message,User\n");
     }
 
     // [1. 읽기 요청 로그]
@@ -372,6 +382,32 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
         return variable;
     }
 
+    // [HDA (Data History) 구현] 값이 변경될 때 CSV에 기록
+    private void LogHistoryData(NodeId nodeId, object value, StatusCode status)
+    {
+        string line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{nodeId},{value},{status}\n";
+        File.AppendAllText(hdaFilePath, line);
+    }
+
+    // [HEA (Event History) 구현] 특정 이벤트(로그인, 오류 등) 발생 시 기록
+    public void LogHistoryEvent(string eventType, string message, string user)
+    {
+        string line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{eventType},{message},{user}\n";
+        File.AppendAllText(heaFilePath, line);
+    }
+
+    // [통계 (Aggregates) 조회용 샘플] 최근 10개 데이터의 평균 계산
+    public double GetTemperatureAverage()
+    {
+        try
+        {
+            var lines = File.ReadLines(hdaFilePath).Reverse().Take(10);
+            var values = lines.Select(l => double.Parse(l.Split(',')[2])).ToList();
+            return values.Average();
+        }
+        catch { return 0; }
+    }
+
     private void DoSimulation(object state)
     {
         // 서버가 실행 중일 때만 동작
@@ -389,6 +425,9 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
             // 값 업데이트
             _temperatureNode.Value = currentTemp;
             _temperatureNode.Timestamp = DateTime.UtcNow; // 시간 갱신 중요
+
+            // 데이터 로깅 (HDA 시뮬레이션)
+            LogHistoryData(_temperatureNode.NodeId, currentTemp, StatusCodes.Good);
 
             // [중요] 변경 사항을 구독자(Client)에게 알림
             _temperatureNode.ClearChangeMasks(SystemContext, false);
@@ -438,6 +477,10 @@ internal class MyUaServer : StandardServer
 
                     if (ValidateUser(username, password))
                     {
+                        // HEA: 로그인 성공 이벤트 기록
+                        var nodeManager = server.NodeManager.NodeManagers.OfType<MyNodeManager_3DPrinter>().FirstOrDefault();
+                        nodeManager?.LogHistoryEvent("Login", "User access granted", username);
+
                         _logAction($"[Auth] 사용자 '{username}' 인증 성공");
                         args.Identity = new UserIdentity(userNameToken);
                     }
