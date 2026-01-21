@@ -77,6 +77,17 @@ public partial class Server : Form
                             SecurityMode = MessageSecurityMode.SignAndEncrypt,
                             SecurityPolicyUri = SecurityPolicies.Basic256Sha256
                         }
+                    },
+                    // 사용자 토큰 정책 추가
+                    UserTokenPolicies =
+                    {
+                        // Anonymous 접근 (기존 방식) --> 허용하지 않으려면 코멘트 처리
+                        //new UserTokenPolicy(UserTokenType.Anonymous),
+                        // UserName/Password 인증 추가
+                        new UserTokenPolicy(UserTokenType.UserName)
+                        {
+                            SecurityPolicyUri = SecurityPolicies.Basic256Sha256
+                        }
                     }
                 }
             };
@@ -392,5 +403,64 @@ internal class MyUaServer : StandardServer
 
         // MasterNodeManager에게 내 리스트를 전달하며 생성합니다.
         return new MasterNodeManager(server, configuration, null, [.. nodeManagers]);
+    }
+
+    // 세션 매니저 생성 시 이벤트 연결
+    protected override SessionManager CreateSessionManager(IServerInternal server, Opc.Ua.ApplicationConfiguration configuration)
+    {
+        var sessionManager = base.CreateSessionManager(server, configuration);
+
+        if (sessionManager is SessionManager manager)
+        {
+            manager.ImpersonateUser += (sender, args) =>
+            {
+                // UserName/Password 토큰인 경우
+                if (args.NewIdentity is UserNameIdentityToken userNameToken)
+                {
+                    string username = userNameToken.UserName;
+                    string password = System.Text.Encoding.UTF8.GetString(userNameToken.DecryptedPassword);
+
+                    _logAction($"[Auth] 사용자 '{username}' 인증 시도");
+
+                    if (ValidateUser(username, password))
+                    {
+                        _logAction($"[Auth] 사용자 '{username}' 인증 성공");
+                        args.Identity = new UserIdentity(userNameToken);
+                    }
+                    else
+                    {
+                        _logAction($"[Auth] 사용자 '{username}' 인증 실패");
+                        throw new ServiceResultException(StatusCodes.BadUserAccessDenied,
+                            "잘못된 사용자명 또는 비밀번호입니다.");
+                    }
+                    return;
+                }
+
+                if (args.NewIdentity is AnonymousIdentityToken)
+                {
+                    _logAction("[Auth] Anonymous 접속 허용");
+                    args.Identity = new UserIdentity(new AnonymousIdentityToken());
+                    return;
+                }
+            };
+
+            return manager; // SessionManager 타입 반환
+        }
+
+        return (SessionManager)sessionManager; // 캐스팅해서 반환
+    }
+
+    private bool ValidateUser(string username, string password)
+    {
+        // 유효한 ID/PW 예시
+        var validUsers = new Dictionary<string, string>
+        {
+            { "admin", "password123" },
+            { "user", "user123" },
+            { "operator", "op123" }
+        };
+
+        return validUsers.TryGetValue(username, out string validPassword)
+               && validPassword == password;
     }
 }

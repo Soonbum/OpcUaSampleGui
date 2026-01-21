@@ -111,18 +111,35 @@ public partial class Client : Form
             var selectedEndpoint = endpoints.FirstOrDefault(e => e.SecurityMode == MessageSecurityMode.SignAndEncrypt) ?? throw new Exception("서버에서 보안 연결(SignAndEncrypt)을 지원하지 않습니다.");
             var endpoint = new ConfiguredEndpoint(null, selectedEndpoint, EndpointConfiguration.Create(config));
 
+            // 사용자 인증 정보 생성
+            UserIdentity userIdentity;
+
+            if (string.IsNullOrWhiteSpace(TxtUsername.Text))
+            {
+                // Anonymous 인증
+                userIdentity = new UserIdentity(new AnonymousIdentityToken());
+                Log("Anonymous 인증으로 연결 시도");
+            }
+            else
+            {
+                // UserName/Password 인증
+                userIdentity = new UserIdentity(TxtUsername.Text, TxtPassword.Text);
+                Log($"사용자 '{TxtUsername.Text}'로 연결 시도");
+            }
+
             // 세션 생성 및 연결
             _session = await Session.Create(
                 config,
                 endpoint,
-                false, // updateBeforeConnect
-                false, // checkDomain
+                false,
+                false,
                 "SimpleSession",
                 60000,
-                new UserIdentity(new AnonymousIdentityToken()),
+                userIdentity, // 사용자 인증 정보 전달
                 []
             );
-            _session.KeepAlive += Session_KeepAlive; // 연결 상태 감시 이벤트
+
+            _session.KeepAlive += Session_KeepAlive;
 
             Log($"서버 연결 성공! (SessionId: {_session.SessionId})");
 
@@ -132,6 +149,11 @@ public partial class Client : Form
             BtnRead.Enabled = true;
             BtnSubscribe.Enabled = true;
             BtnWrite.Enabled = true;
+        }
+        catch (ServiceResultException sre) when (sre.StatusCode == StatusCodes.BadUserAccessDenied)
+        {
+            Log($"[Error] 인증 실패: 잘못된 사용자명 또는 비밀번호");
+            MessageBox.Show("인증에 실패했습니다. 사용자명과 비밀번호를 확인하세요.", "인증 오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         catch (Exception ex)
         {

@@ -35,6 +35,10 @@
             BtnWrite = new Button();
             BtnUnsubscribe = new Button();
             BtnDisconnect = new Button();
+            TxtUsername = new TextBox();
+            TxtPassword = new TextBox();
+            LabelUsername = new Label();
+            LabelPassword = new Label();
             SuspendLayout();
             // 
             // TxtLog
@@ -109,11 +113,48 @@
             BtnDisconnect.UseVisualStyleBackColor = true;
             BtnDisconnect.Click += BtnDisconnect_Click;
             // 
+            // TxtUsername
+            // 
+            TxtUsername.Location = new Point(161, 411);
+            TxtUsername.Name = "TxtUsername";
+            TxtUsername.Size = new Size(100, 23);
+            TxtUsername.TabIndex = 8;
+            // 
+            // TxtPassword
+            // 
+            TxtPassword.Location = new Point(161, 468);
+            TxtPassword.Name = "TxtPassword";
+            TxtPassword.PasswordChar = '*';
+            TxtPassword.Size = new Size(100, 23);
+            TxtPassword.TabIndex = 9;
+            // 
+            // LabelUsername
+            // 
+            LabelUsername.AutoSize = true;
+            LabelUsername.Location = new Point(161, 393);
+            LabelUsername.Name = "LabelUsername";
+            LabelUsername.Size = new Size(60, 15);
+            LabelUsername.TabIndex = 10;
+            LabelUsername.Text = "Username";
+            // 
+            // LabelPassword
+            // 
+            LabelPassword.AutoSize = true;
+            LabelPassword.Location = new Point(161, 450);
+            LabelPassword.Name = "LabelPassword";
+            LabelPassword.Size = new Size(57, 15);
+            LabelPassword.TabIndex = 11;
+            LabelPassword.Text = "Password";
+            // 
             // Client
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(535, 524);
+            Controls.Add(LabelPassword);
+            Controls.Add(LabelUsername);
+            Controls.Add(TxtPassword);
+            Controls.Add(TxtUsername);
             Controls.Add(BtnDisconnect);
             Controls.Add(BtnUnsubscribe);
             Controls.Add(BtnWrite);
@@ -136,5 +177,9 @@
         private Button BtnWrite;
         private Button BtnUnsubscribe;
         private Button BtnDisconnect;
+        private TextBox TxtUsername;
+        private TextBox TxtPassword;
+        private Label LabelUsername;
+        private Label LabelPassword;
     }
 }
