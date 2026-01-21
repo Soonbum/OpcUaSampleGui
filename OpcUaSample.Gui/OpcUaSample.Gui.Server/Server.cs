@@ -232,9 +232,9 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
         IList<MonitoringFilterResult> filterErrors,
         IList<IMonitoredItem> monitoredItems,
         bool createDurable,
-        ref long globalIdCounter)
+        MonitoredItemIdFactory monitoredItemIdFactory)
     {
-        base.CreateMonitoredItems(context, subscriptionId, publishingInterval, timestampsToReturn, itemsToCreate, errors, filterErrors, monitoredItems, createDurable, ref globalIdCounter);
+        base.CreateMonitoredItems(context, subscriptionId, publishingInterval, timestampsToReturn, itemsToCreate, errors, filterErrors, monitoredItems, createDurable, monitoredItemIdFactory);
         foreach (var item in itemsToCreate)
         {
             _logAction($"[Subscribe] Client: {context.Session.Id}, Node: {item.ItemToMonitor.NodeId}");
