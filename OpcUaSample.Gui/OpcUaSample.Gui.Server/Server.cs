@@ -225,6 +225,20 @@ internal class MyNodeManager_3DPrinter : CustomNodeManager2
         IList<WriteValue> nodesToWrite,
         IList<ServiceResult> errors)
     {
+        // 현재 접속한 사용자의 Identity 확인
+        var identity = context.Session.Identity as UserIdentity;
+
+        // 만약 ID가 'operator'라면 쓰기 권한 거부
+        if (identity?.DisplayName == "operator")
+        {
+            for (int i = 0; i < nodesToWrite.Count; i++)
+            {
+                errors[i] = StatusCodes.BadUserAccessDenied;
+            }
+            _logAction($"[Auth] 'operator' 사용자의 쓰기 요청이 거절되었습니다.");
+            return;
+        }
+
         base.Write(context, nodesToWrite, errors);
         foreach (var node in nodesToWrite)
         {
